@@ -9,7 +9,7 @@ import json
 
 
 # LED strip configuration:
-LED_COUNT      = 445 #386      # Number of LED pixels.
+LED_COUNT      = 360 #386      # Number of LED pixels.
 LED_PIN        = 18      # GPIO pin connected to the pixels (18 uses PWM!).
 #LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -332,19 +332,13 @@ if __name__ == '__main__':
 
     # LED Array Wagen
     wagen_links=[]
-    for i in range(28,193):
+    for i in range(37,218):
         wagen_links.append(leds[i])
     wagen_rechts=[]
-    for i in range(413,192,-1):
+    for i in range(36,-1,-1):
         wagen_rechts.append(leds[i])
-
-    # LED Array Wagen
-    tuer_links=[]
-    for i in range(414,len(leds)-1):
-        tuer_links.append(leds[i])
-    tuer_rechts=[]
-    for i in range(27,-1,-1):
-        tuer_rechts.append(leds[i])
+    for i in range(359,217,-1):
+        wagen_rechts.append(leds[i])
 
     #startup wait
     time.sleep(30)  
@@ -358,12 +352,12 @@ if __name__ == '__main__':
 
     # Thema abonnieren
     print ("Subscribe topic 'tuer'")
-    client.subscribe("tuer")
+    #client.subscribe("tuer")
     print ("Subscribe topic 'wagen'")
     client.subscribe("wagen")
 
     # LED Tuer Thread starten
-    tuer_thread = ThreadKillable(tuer_programm)
+    #tuer_thread = ThreadKillable(tuer_programm)
 
     # LED Wagen Thread starten
     wagen_links_thread = ThreadKillable(wagen_programm)
