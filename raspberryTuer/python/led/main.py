@@ -65,10 +65,10 @@ def on_message(client, userdata, message):
 
 def wagen_programm(leds, msg):
     # Farbwerte aus dem Dictionary extrahieren
-    r, g, b = msg["color"]
+    r, g, b = msg.get("color",[255,255,255])
     color=Color(r,g,b)
     # Programmart extrahieren
-    prog = msg["program"]
+    prog = msg.get("program","notSpecified")
 
     if prog == "colorWipe":
         print ('Color wipe')
@@ -94,19 +94,83 @@ def wagen_programm(leds, msg):
         print ("Theater Chase Rainbow")
         while True:
             theaterChaseRainbow(leds)
+    else:
+        print ("Program unknown - Color only")
+        setColor(leds,color)
 
 def tuer_programm(leds_links, leds_rechts, msg):
     # Farbwerte aus dem Dictionary extrahieren
-    r, g, b = msg["color"]
+    #r, g, b = msg["color"]
+    r, g, b = msg.get("color",[255,255,255])
     color=Color(r,g,b)
     # Programmart extrahieren
-    prog = msg["program"]
+    prog = msg.get("program","notSpecified")
+    wait_ms = msg.get("waitInMs",50)
+    reverse = msg.get("reverse",False)
 
-    # Farbwerte ausgeben
-    for led in leds_links:
-        led.set_color(Color(r,g,b))
-    for led in leds_rechts:
-        led.set_color(Color(r,g,b))
+    if prog == "flashing":
+        print ("Flashing")
+        flashing(leds_links + leds_rechts,color,wait_ms)
+    elif prog == "runningSimultaniously":
+        print ("running simultaniously")
+        running_simultaniously(leds_links, leds_rechts, color, wait_ms, reverse)
+    else:
+        print ("Program unknown - Color only")
+        setColor(leds_links + leds_rechts, color)
+
+#-------------------------------------------------
+#             Meine Animationen
+
+def running(leds, color, wait_ms=50, gap=3, light=3):
+    while True:
+        for i in range(len(leds) - light - gap + 1):
+            for j in range(i, i + light):
+                leds[j].set_color(color)
+            for k in range(i + light + gap, len(leds)):
+                leds[k].set_color(Color(0, 0, 0))
+            time.sleep(wait_ms / 1000.0)
+
+#def running_simultaniously (leds1, leds2, color, wait_ms, gap, light):
+#  n = min(len(leds1), len(leds2))
+#  while True:
+#    for i in range(n - light - gap + 1):
+#      for j in range(i, i + light):
+#        leds1[j].set_color(color)
+#        leds2[j].set_color(color)
+#      for k in range(i + light + gap, n):
+#        leds1[k].set_color(Color(0, 0, 0))
+#        leds2[k].set_color(Color(0, 0, 0))
+#      time.sleep(wait_ms / 1000.0)
+
+def running_simultaniously (leds1, leds2, color, wait_ms=50, reverse=False, gap=3, light=3):
+  n = min(len(leds1), len(leds2))
+  while True:
+    for i in range(n - light - gap + 1):
+      if reverse:
+        i = n - light - gap - i
+      for j in range(i, i + light):
+        leds1[j].set_color(color)
+        leds2[j].set_color(color)
+      for k in range(i + light + gap, n):
+        leds1[k].set_color(Color(0, 0, 0))
+        leds2[k].set_color(Color(0, 0, 0))
+      time.sleep(wait_ms / 1000.0)  
+
+def setColor(leds, color):
+    while True:
+        # Farbwerte ausgeben
+        for led in leds:
+            led.set_color(color)
+        time.sleep(0.5)
+
+def flashing(leds, color, wait_ms=50):
+    while True:
+        # Farbwerte ausgeben
+        for led in leds:
+            led.set_color(color)
+        time.sleep(wait_ms/1000.0)
+        for led in leds:
+            led.set_color(Color(0,0,0))
 
 #-------------------------------------------------
 #           Beispiel Animationen
