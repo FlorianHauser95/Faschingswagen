@@ -36,19 +36,77 @@ def neopixel_thread(strip, leds):
             strip.setPixelColor(i, leds[i].color)
         strip.show()
 
+#-------------------------------------------------
 # MQTT Message 
 # Callback-Funktion für eingehende Nachrichten
 def on_message(client, userdata, message):
     # Nachricht empfangen und als JSON-Dictionary decodieren
     msg = json.loads(message.payload.decode())
-    # Farbwerte aus dem Dictionary extrahieren
-    r, g, b = msg["color"]
-    # Farbwerte ausgeben
-    for led in tuer:
-        led.set_color(Color(r,g,b))
+     # Überprüfe, von welchem Topic die Nachricht stammt
+    if message.topic == "tuer":
+        #den aktuellen tuer Thread beenden und neu starten
+        tuer_thread.stop()
+        tuer_thread =  threading.Thread(target=tuer_programm,args=(tuer_links, tuer_rechts, message,))
+        tuer_thread.start()
+    elif message.topic == "wagen":
+         #den aktuellen tuer Thread beenden und neu starten
+        wagen_rechts_thread.stop()
+        wagen_links_thread.stop()
+        wagen_rechts_thread =  threading.Thread(target=wagen_programm,args=(wagen_rechts,message,))
+        wagen_links_thread =  threading.Thread(target=wagen_programm,args=(wagen_links,message,))
+        wagen_rechts_thread.start()
+        wagen_links_thread.start()
+    else:
+        # Keine passende Verarbeitung gefunden
+        print("Unbekanntes Topic empfangen:", message.topic)
 
 #-------------------------------------------------
 #             Animations Thread
+
+def wagen_programm(leds, msg):
+    # Farbwerte aus dem Dictionary extrahieren
+    r, g, b = msg["color"]
+    color=Color(r,g,b)
+    # Programmart extrahieren
+    prog = msg["program"]
+
+    if prog == "colorWipe":
+        print ('Color wipe')
+        while True:
+            colorWipe(leds, color)
+
+    elif prog == "theaterChase":
+        print ('Theater Chase.')
+        while True:
+            theaterChase(leds, color)
+
+    elif prog == "rainbow":
+        print ('Rainbow')
+        while True:
+            rainbow(leds)
+        
+    elif prog == "rainbowCycle":
+        print ("Rainbow Cycle")
+        while True:
+            rainbowCycle(leds)
+
+    elif prog == "theaterChaseRainbow":
+        print ("Theater Chase Rainbow")
+        while True:
+            theaterChaseRainbow(leds)
+
+def tuer_programm(leds_links, leds_rechts, msg):
+    # Farbwerte aus dem Dictionary extrahieren
+    r, g, b = msg["color"]
+    color=Color(r,g,b)
+    # Programmart extrahieren
+    prog = msg["program"]
+
+    # Farbwerte ausgeben
+    for led in leds_links:
+        led.set_color(Color(r,g,b))
+    for led in leds_rechts:
+        led.set_color(Color(r,g,b))
 
 #-------------------------------------------------
 #           Beispiel Animationen
@@ -126,16 +184,21 @@ if __name__ == '__main__':
         leds.append(LED(Color(0,0,0)));
 
     # LED Array Wagen
-    wagen=[]
-    for i in range(28,414):
+    wagen_links=[]
+    for i in range(28,193):
+        wagen.append(leds[i])
+    wagen_rechts=[]
+    for i in range(413,192,-1):
         wagen.append(leds[i])
 
     # LED Array Wagen
-    tuer=[]
-    for i in range(0,28):
-        tuer.append(leds[i])
+    tuer_links=[]
     for i in range(414,len(leds)-1):
-        tuer.append(leds[i])
+        tuer_links.append(leds[i])
+    tuer_rechts=[]
+    for i in range(27,-1,-1):
+        tuer_rechts.append(leds[i])
+   
 
     #MQTT-Client Thread starten
     client = mqtt.Client()
@@ -146,10 +209,14 @@ if __name__ == '__main__':
 
     # Thema abonnieren
     client.subscribe("tuer")
+    client.subscribe("wagen")
 
-    # Nachrichten empfangen
-    mqtt_thread = threading.Thread(target=client.loop_forever)
-    mqtt_thread.start()
+    # LED Tuer Thread starten
+    tuer_thread = threading.Thread(target=tuer_thread)
+
+    # LED Wagen Thread starten
+    wagen_links_thread = threading.Thread(target=wagen_thread)
+    wagen_rechts_thread = threading.Thread(target=wagen_thread)
 
     #LED refresh Thread starten
     neopixel_refresh_thread = threading.Thread(target=neopixel_thread, args=(strip,leds,))
@@ -160,21 +227,7 @@ if __name__ == '__main__':
         print('Use "-c" argument to clear LEDs on exit')
 
     try:
-
-        while True:
-            print ('Color wipe animations.')
-            colorWipe(wagen, Color(255, 0, 0))  # Red wipe
-            colorWipe(wagen, Color(0, 255, 0))  # Blue wipe
-            colorWipe(wagen, Color(0, 0, 255))  # Green wipe
-            print ('Theater chase animations.')
-            for i in range(10):
-                theaterChase(wagen, Color(127, 127, 127))  # White theater chase
-                theaterChase(wagen, Color(127,   0,   0))  # Red theater chase
-                theaterChase(wagen, Color(  0,   0, 127))  # Blue theater chase
-            print ('Rainbow animations.')
-            rainbow(wagen)
-            rainbowCycle(wagen)
-            theaterChaseRainbow(wagen)
+        client.loop_forever()
 
     except KeyboardInterrupt:
         if args.clear:
