@@ -18,13 +18,35 @@ LED_BRIGHTNESS = 255     # Set to 0 for darkest and 255 for brightest
 LED_INVERT     = False   # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL    = 0       # set to '1' for GPIOs 13, 19, 41, 45 or 53
 
+
+class ThreadKillable:
+    def __init__(self, target, args=()):
+        self.exit_request = False
+        self.started = False
+        self.thread = threading.Thread(target=target,args=(self,)+args)
+    def start(self):
+        self.thread.start()
+        self.started = True
+    def stop(self):
+        self.exit_request = True
+        if self.started:
+            self.thread.join()
+    
+
 class LED:
     def __init__(self, color):
         self.color = color
         
     def set_color(self, color):
         self.color = color
+        
+#-------------------------------------------------
+# Threads
 
+# LED Wagen Thread starten
+#wagen_links_thread = ThreadKillable()
+#wagen_rechts_thread = ThreadKillable()
+#tuer_thread = ThreadKillable()
 
 #-------------------------------------------------
 #            Aktualisierungs Thread
@@ -40,20 +62,25 @@ def neopixel_thread(strip, leds):
 # MQTT Message 
 # Callback-Funktion für eingehende Nachrichten
 def on_message(client, userdata, message):
+    global tuer_thread
+    global wagen_rechts_thread
+    global wagen_links_thread
+
     # Nachricht empfangen und als JSON-Dictionary decodieren
     msg = json.loads(message.payload.decode())
      # Überprüfe, von welchem Topic die Nachricht stammt
     if message.topic == "tuer":
         #den aktuellen tuer Thread beenden und neu starten
+
         tuer_thread.stop()
-        tuer_thread =  threading.Thread(target=tuer_programm,args=(tuer_links, tuer_rechts, message,))
+        tuer_thread =  ThreadKillable(target=tuer_programm,args=(tuer_links, tuer_rechts, msg,))
         tuer_thread.start()
     elif message.topic == "wagen":
          #den aktuellen tuer Thread beenden und neu starten
         wagen_rechts_thread.stop()
         wagen_links_thread.stop()
-        wagen_rechts_thread =  threading.Thread(target=wagen_programm,args=(wagen_rechts,message,))
-        wagen_links_thread =  threading.Thread(target=wagen_programm,args=(wagen_links,message,))
+        wagen_rechts_thread = ThreadKillable(target=wagen_programm,args=(wagen_rechts,msg,))
+        wagen_links_thread = ThreadKillable(target=wagen_programm,args=(wagen_links,msg,))
         wagen_rechts_thread.start()
         wagen_links_thread.start()
     else:
@@ -63,7 +90,7 @@ def on_message(client, userdata, message):
 #-------------------------------------------------
 #             Animations Thread
 
-def wagen_programm(leds, msg):
+def wagen_programm(calling_thread, leds, msg):
     # Farbwerte aus dem Dictionary extrahieren
     r, g, b = msg.get("color",[255,255,255])
     color=Color(r,g,b)
@@ -73,35 +100,46 @@ def wagen_programm(leds, msg):
     if prog == "colorWipe":
         print ('Color wipe')
         while True:
-            colorWipe(leds, color)
+            colorWipe(calling_thread, leds, color)
+            if calling_thread.exit_request:
+                return
 
     elif prog == "theaterChase":
         print ('Theater Chase.')
         while True:
-            theaterChase(leds, color)
+            theaterChase(calling_thread, leds, color)
+            if calling_thread.exit_request:
+                return
 
     elif prog == "rainbow":
         print ('Rainbow')
         while True:
-            rainbow(leds)
+            rainbow(calling_thread, leds)
+            if calling_thread.exit_request:
+                return
         
     elif prog == "rainbowCycle":
         print ("Rainbow Cycle")
         while True:
-            rainbowCycle(leds)
+            rainbowCycle(calling_thread, leds)
+            if calling_thread.exit_request:
+                return
 
     elif prog == "theaterChaseRainbow":
         print ("Theater Chase Rainbow")
         while True:
-            theaterChaseRainbow(leds)
+            theaterChaseRainbow(calling_thread, leds)
+            if calling_thread.exit_request:
+                return
     else:
         print ("Program unknown - Color only")
-        setColor(leds,color)
+        setColor(calling_thread, leds,color)
+        if calling_thread.exit_request:
+            return
 
-def tuer_programm(leds_links, leds_rechts, msg):
+def tuer_programm(calling_thread, leds_links, leds_rechts, msg):
     # Farbwerte aus dem Dictionary extrahieren
-    #r, g, b = msg["color"]
-    r, g, b = msg.get("color",[255,255,255])
+    r, g, b = msg.get("color",[0,0,0])
     color=Color(r,g,b)
     # Programmart extrahieren
     prog = msg.get("program","notSpecified")
@@ -110,25 +148,34 @@ def tuer_programm(leds_links, leds_rechts, msg):
 
     if prog == "flashing":
         print ("Flashing")
-        flashing(leds_links + leds_rechts,color,wait_ms)
+        flashing(calling_thread, leds_links + leds_rechts,color,wait_ms)
+        if calling_thread.exit_request:
+            return
     elif prog == "runningSimultaniously":
         print ("running simultaniously")
-        running_simultaniously(leds_links, leds_rechts, color, wait_ms, reverse)
+        running_simultaniously(calling_thread, leds_links, leds_rechts, color, wait_ms, reverse)
+        if calling_thread.exit_request:
+            return
     else:
         print ("Program unknown - Color only")
-        setColor(leds_links + leds_rechts, color)
+        setColor(calling_thread, leds_links + leds_rechts, color)
+        if calling_thread.exit_request:
+            return
 
 #-------------------------------------------------
 #             Meine Animationen
 
-def running(leds, color, wait_ms=50, gap=3, light=3):
+def running(exit_request, leds, color, wait_ms=50, gap=3, light=3):
     while True:
         for i in range(len(leds) - light - gap + 1):
             for j in range(i, i + light):
                 leds[j].set_color(color)
             for k in range(i + light + gap, len(leds)):
                 leds[k].set_color(Color(0, 0, 0))
-            time.sleep(wait_ms / 1000.0)
+            if calling_thread.exit_request:
+                return
+            else:
+                time.sleep(wait_ms / 1000.0)
 
 #def running_simultaniously (leds1, leds2, color, wait_ms, gap, light):
 #  n = min(len(leds1), len(leds2))
@@ -142,53 +189,78 @@ def running(leds, color, wait_ms=50, gap=3, light=3):
 #        leds2[k].set_color(Color(0, 0, 0))
 #      time.sleep(wait_ms / 1000.0)
 
-def running_simultaniously (leds1, leds2, color, wait_ms=50, reverse=False, gap=3, light=3):
+def running_simultaniously (calling_thread, leds1, leds2, color, wait_ms=50, reverse=False, gap=3, light=3):
   n = min(len(leds1), len(leds2))
   while True:
     for i in range(n - light - gap + 1):
-      if reverse:
-        i = n - light - gap - i
-      for j in range(i, i + light):
-        leds1[j].set_color(color)
-        leds2[j].set_color(color)
-      for k in range(i + light + gap, n):
-        leds1[k].set_color(Color(0, 0, 0))
-        leds2[k].set_color(Color(0, 0, 0))
-      time.sleep(wait_ms / 1000.0)  
+        if reverse:
+            i = n - light - gap - i
+        for j in range(i, i + light):
+            leds1[j].set_color(color)
+            leds2[j].set_color(color)
+        for k in range(i + light + gap, n):
+            leds1[k].set_color(Color(0, 0, 0))
+            leds2[k].set_color(Color(0, 0, 0))
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(wait_ms / 1000.0)  
 
-def setColor(leds, color):
+def setColor(calling_thread, leds, color):
     while True:
         # Farbwerte ausgeben
         for led in leds:
             led.set_color(color)
-        time.sleep(0.5)
+        # Exit animation
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(0.5)
 
-def flashing(leds, color, wait_ms=50):
+def flashing(calling_thread, leds, color, wait_ms=50, wait_off_ms=50):
     while True:
         # Farbwerte ausgeben
         for led in leds:
             led.set_color(color)
-        time.sleep(wait_ms/1000.0)
+        # Exit animation
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(wait_ms/1000.0)
+        # LED ausschalten
         for led in leds:
             led.set_color(Color(0,0,0))
+        # Exit animation
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(wait_off_ms/1000.0)
 
 #-------------------------------------------------
 #           Beispiel Animationen
 
 # Define functions which animate LEDs in various ways.
-def colorWipe(leds, color, wait_ms=25):
+def colorWipe(calling_thread, leds, color, wait_ms=25):
     """Wipe color across display a pixel at a time."""
     for led in leds:
         led.color = color
-        time.sleep(wait_ms/1000.0)
+        # Exit animation
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(wait_ms/1000.0)
 
-def theaterChase(leds, color, wait_ms=50, iterations=10):
+def theaterChase(calling_thread, leds, color, wait_ms=50, iterations=10):
     """Movie theater light style chaser animation."""
     for j in range(iterations):
         for q in range(3):
             for i in range(0, len(leds), 3):
                 leds[(i+q)%(len(leds)-1)].set_color(color)            
-            time.sleep(wait_ms/1000.0)
+            # Exit animation
+            if calling_thread.exit_request:
+                return
+            else:
+                time.sleep(wait_ms/1000.0)
             for i in range(0, len(leds), 3):
                 leds[(i+q)%(len(leds)-1)].set_color(Color(0,0,0))
 
@@ -203,28 +275,39 @@ def wheel(pos):
         pos -= 170
         return Color(0, pos * 3, 255 - pos * 3)
 
-def rainbow(leds, wait_ms=20, iterations=1):
+def rainbow(calling_thread, leds, wait_ms=20, iterations=1):
     """Draw rainbow that fades across all pixels at once."""
     for j in range(256*iterations):
         for i in range(len(leds)):
             leds[i].set_color(wheel((i+j) & 255))
-        time.sleep(wait_ms/1000.0)
+        # Exit animation
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(wait_ms/1000.0)
 
-def rainbowCycle(leds, wait_ms=20, iterations=5):
+def rainbowCycle(calling_thread, leds, wait_ms=20, iterations=5):
     """Draw rainbow that uniformly distributes itself across all pixels."""
     for j in range(256*iterations):
         for i in range(len(leds)):
             leds[i].set_color(wheel(min(255,(int(i * 256 / len(leds)) + j) & 255)))
-        time.sleep(wait_ms/1000.0)
+        # Exit animation
+        if calling_thread.exit_request:
+            return
+        else:
+            time.sleep(wait_ms/1000.0)
 
-def theaterChaseRainbow(leds, wait_ms=50):
+def theaterChaseRainbow(calling_thread, leds, wait_ms=50):
     """Rainbow movie theater light style chaser animation."""
     for j in range(256):
         for q in range(3):
             for i in range(0, len(leds), 3):
                 leds[(i+q)%(len(leds)-1)].set_color(wheel((i+j) % 255))
-            
-            time.sleep(wait_ms/1000.0)
+            # Exit animation
+            if calling_thread.exit_request:
+                return
+            else:
+                time.sleep(wait_ms/1000.0)
             for i in range(0, len(leds), 3):
                 leds[(i+q)%(len(leds)-1)].set_color(0)
 
@@ -250,10 +333,10 @@ if __name__ == '__main__':
     # LED Array Wagen
     wagen_links=[]
     for i in range(28,193):
-        wagen.append(leds[i])
+        wagen_links.append(leds[i])
     wagen_rechts=[]
     for i in range(413,192,-1):
-        wagen.append(leds[i])
+        wagen_rechts.append(leds[i])
 
     # LED Array Wagen
     tuer_links=[]
@@ -272,18 +355,20 @@ if __name__ == '__main__':
     client.connect("192.168.178.105", 1883)
 
     # Thema abonnieren
+    print ("Subscribe topic 'tuer'")
     client.subscribe("tuer")
+    print ("Subscribe topic 'wagen'")
     client.subscribe("wagen")
 
     # LED Tuer Thread starten
-    tuer_thread = threading.Thread(target=tuer_thread)
+    tuer_thread = ThreadKillable(tuer_programm)
 
     # LED Wagen Thread starten
-    wagen_links_thread = threading.Thread(target=wagen_thread)
-    wagen_rechts_thread = threading.Thread(target=wagen_thread)
+    wagen_links_thread = ThreadKillable(wagen_programm)
+    wagen_rechts_thread = ThreadKillable(wagen_programm)
 
     #LED refresh Thread starten
-    neopixel_refresh_thread = threading.Thread(target=neopixel_thread, args=(strip,leds,))
+    neopixel_refresh_thread = threading.Thread(target=neopixel_thread,args=(strip,leds,))
     neopixel_refresh_thread.start()
 
     print ('Press Ctrl-C to quit.')
