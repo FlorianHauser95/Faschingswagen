@@ -93,6 +93,8 @@ def on_message(client, userdata, message):
 def wagen_programm(calling_thread, leds, msg):
     # Farbwerte aus dem Dictionary extrahieren
     r, g, b = msg.get("color",[255,255,255])
+    color_arrays = msg.get("colors",[[255,255,255]])
+    colors = [Color(*c) for c in color_arrays] 
     color=Color(r,g,b)
     # Programmart extrahieren
     prog = msg.get("program","notSpecified")
@@ -100,7 +102,7 @@ def wagen_programm(calling_thread, leds, msg):
     if prog == "colorWipe":
         print ('Color wipe')
         while True:
-            colorWipe(calling_thread, leds, color)
+            colorWipe(calling_thread, leds, colors)
             if calling_thread.exit_request:
                 return
 
@@ -240,15 +242,18 @@ def flashing(calling_thread, leds, color, wait_ms=50, wait_off_ms=50):
 #           Beispiel Animationen
 
 # Define functions which animate LEDs in various ways.
-def colorWipe(calling_thread, leds, color, wait_ms=25):
+def colorWipe(calling_thread, leds, colors, wait_ms=25):
     """Wipe color across display a pixel at a time."""
     for led in leds:
-        led.color = color
-        # Exit animation
-        if calling_thread.exit_request:
-            return
-        else:
-            time.sleep(wait_ms/1000.0)
+        led.color = Color(0,0,0)
+    for color in colors:
+        for led in leds:
+            led.color = color
+            # Exit animation
+            if calling_thread.exit_request:
+                return
+            else:
+                time.sleep(wait_ms/1000.0)
 
 def theaterChase(calling_thread, leds, color, wait_ms=50, iterations=10):
     """Movie theater light style chaser animation."""
