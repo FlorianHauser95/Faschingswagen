@@ -341,7 +341,8 @@ if __name__ == '__main__':
         wagen_rechts.append(leds[i])
 
     #startup wait
-    time.sleep(30)  
+    print("Startup waiting time")
+    time.sleep(60)  
 
     #MQTT-Client Thread starten
     client = mqtt.Client()
