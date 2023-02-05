@@ -60,7 +60,6 @@ def neopixel_thread(strip, leds):
 
 #-------------------------------------------------
 # MQTT Message 
-# Callback-Funktion für eingehende Nachrichten
 def on_message(client, userdata, message):
     global tuer_thread
     global wagen_rechts_thread
@@ -68,7 +67,7 @@ def on_message(client, userdata, message):
 
     # Nachricht empfangen und als JSON-Dictionary decodieren
     msg = json.loads(message.payload.decode())
-     # Überprüfe, von welchem Topic die Nachricht stammt
+     # von welchem Topic die Nachricht stammt
     if message.topic == "tuer":
         #den aktuellen tuer Thread beenden und neu starten
 
@@ -339,10 +338,6 @@ if __name__ == '__main__':
         wagen_rechts.append(leds[i])
     for i in range(359,217,-1):
         wagen_rechts.append(leds[i])
-
-    #startup wait
-    print("Startup waiting time")
-    time.sleep(60)  
 
     #MQTT-Client Thread starten
     client = mqtt.Client()
