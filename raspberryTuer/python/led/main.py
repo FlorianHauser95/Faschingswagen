@@ -351,8 +351,6 @@ if __name__ == '__main__':
     for i in range(27,-1,-1):
         tuer_rechts.append(leds[i])
 
-    #startup wait
-    time.sleep(30)  
 
     #MQTT-Client Thread starten
     client = mqtt.Client()
