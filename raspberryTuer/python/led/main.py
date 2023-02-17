@@ -9,7 +9,7 @@ import json
 
 
 # LED strip configuration:
-LED_COUNT      = 445 #386      # Number of LED pixels.
+LED_COUNT      = 446 #386      # Number of LED pixels.
 LED_PIN        = 18      # GPIO pin connected to the pixels (18 uses PWM!).
 #LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -337,18 +337,18 @@ if __name__ == '__main__':
 
     # LED Array Wagen
     wagen_links=[]
-    for i in range(28,193):
+    for i in range(29,224):
         wagen_links.append(leds[i])
     wagen_rechts=[]
-    for i in range(413,192,-1):
+    for i in range(414,223,-1):
         wagen_rechts.append(leds[i])
 
     # LED Array Wagen
     tuer_links=[]
-    for i in range(414,len(leds)-1):
+    for i in range(415,len(leds)-1):
         tuer_links.append(leds[i])
     tuer_rechts=[]
-    for i in range(27,-1,-1):
+    for i in range(28,-1,-1):
         tuer_rechts.append(leds[i])
 
 
