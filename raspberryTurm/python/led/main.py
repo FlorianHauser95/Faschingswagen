@@ -9,7 +9,7 @@ import json
 
 
 # LED strip configuration:
-LED_COUNT      = 360 #386      # Number of LED pixels.
+LED_COUNT      = 505  # alter wert ohne haus 360     # Number of LED pixels.
 LED_PIN        = 18      # GPIO pin connected to the pixels (18 uses PWM!).
 #LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -82,6 +82,13 @@ def on_message(client, userdata, message):
         wagen_links_thread = ThreadKillable(target=wagen_programm,args=(wagen_links,msg,))
         wagen_rechts_thread.start()
         wagen_links_thread.start()
+
+        haus_rechts_thread.stop()
+        haus_links_thread.stop()
+        haus_rechts_thread = ThreadKillable(target=wagen_programm,args=(haus_rechts,msg,))
+        haus_links_thread = ThreadKillable(target=wagen_programm,args=(haus_links,msg,))
+        haus_rechts_thread.start()
+        haus_links_thread.start()
     else:
         # Keine passende Verarbeitung gefunden
         print("Unbekanntes Topic empfangen:", message.topic)
@@ -339,6 +346,16 @@ if __name__ == '__main__':
     for i in range(359,217,-1):
         wagen_rechts.append(leds[i])
 
+    # LED Array Haus
+    haus_links=[]
+    for i in range(487,414,-1):
+        haus_links.append(leds[i])
+    haus_rechts=[]
+    for i in range(488,505):
+        haus_rechts.append(leds[i])
+    for i in range(360,415):
+        haus_rechts.append(leds[i])
+
     #MQTT-Client Thread starten
     client = mqtt.Client()
     client.on_message = on_message
@@ -358,6 +375,9 @@ if __name__ == '__main__':
     # LED Wagen Thread starten
     wagen_links_thread = ThreadKillable(wagen_programm)
     wagen_rechts_thread = ThreadKillable(wagen_programm)
+    # LED Wagen Thread starten
+    haus_links_thread = ThreadKillable(wagen_programm)
+    haus_rechts_thread = ThreadKillable(wagen_programm)
 
     #LED refresh Thread starten
     neopixel_refresh_thread = threading.Thread(target=neopixel_thread,args=(strip,leds,))
