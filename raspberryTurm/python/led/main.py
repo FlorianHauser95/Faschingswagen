@@ -356,6 +356,16 @@ if __name__ == '__main__':
     for i in range(360,415):
         haus_rechts.append(leds[i])
 
+    # LED Tuer Thread starten
+    #tuer_thread = ThreadKillable(tuer_programm)
+
+    # LED Wagen Thread starten
+    wagen_links_thread = ThreadKillable(wagen_programm)
+    wagen_rechts_thread = ThreadKillable(wagen_programm)
+    # LED Wagen Thread starten
+    haus_links_thread = ThreadKillable(wagen_programm)
+    haus_rechts_thread = ThreadKillable(wagen_programm)
+
     #MQTT-Client Thread starten
     client = mqtt.Client()
     client.on_message = on_message
@@ -368,16 +378,6 @@ if __name__ == '__main__':
     #client.subscribe("tuer")
     print ("Subscribe topic 'wagen'")
     client.subscribe("wagen")
-
-    # LED Tuer Thread starten
-    #tuer_thread = ThreadKillable(tuer_programm)
-
-    # LED Wagen Thread starten
-    wagen_links_thread = ThreadKillable(wagen_programm)
-    wagen_rechts_thread = ThreadKillable(wagen_programm)
-    # LED Wagen Thread starten
-    haus_links_thread = ThreadKillable(wagen_programm)
-    haus_rechts_thread = ThreadKillable(wagen_programm)
 
     #LED refresh Thread starten
     neopixel_refresh_thread = threading.Thread(target=neopixel_thread,args=(strip,leds,))
