@@ -64,6 +64,8 @@ def on_message(client, userdata, message):
     global tuer_thread
     global wagen_rechts_thread
     global wagen_links_thread
+    global haus_rechts_thread
+    global haus_links_thread
 
     # Nachricht empfangen und als JSON-Dictionary decodieren
     msg = json.loads(message.payload.decode())
