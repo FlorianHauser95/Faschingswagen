@@ -348,8 +348,10 @@ if __name__ == '__main__':
     for i in range(415,len(leds)-1):
         tuer_links.append(leds[i])
     tuer_rechts=[]
+
     for i in range(28,-1,-1):
         tuer_rechts.append(leds[i])
+
 
 
     #MQTT-Client Thread starten
@@ -357,7 +359,7 @@ if __name__ == '__main__':
     client.on_message = on_message
 
     # Verbindung zum MQTT-Broker herstellen
-    client.connect("192.168.178.105", 1883)
+    client.connect("localhost", 1883)
 
     # Thema abonnieren
     print ("Subscribe topic 'tuer'")
