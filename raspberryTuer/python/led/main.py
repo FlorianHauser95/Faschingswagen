@@ -9,7 +9,7 @@ import json
 
 
 # LED strip configuration:
-LED_COUNT      = 445 #386      # Number of LED pixels.
+LED_COUNT      = 446 #386      # Number of LED pixels.
 LED_PIN        = 18      # GPIO pin connected to the pixels (18 uses PWM!).
 #LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -93,6 +93,8 @@ def on_message(client, userdata, message):
 def wagen_programm(calling_thread, leds, msg):
     # Farbwerte aus dem Dictionary extrahieren
     r, g, b = msg.get("color",[255,255,255])
+    color_arrays = msg.get("colors",[[255,255,255]])
+    colors = [Color(*c) for c in color_arrays] 
     color=Color(r,g,b)
     # Programmart extrahieren
     prog = msg.get("program","notSpecified")
@@ -100,7 +102,7 @@ def wagen_programm(calling_thread, leds, msg):
     if prog == "colorWipe":
         print ('Color wipe')
         while True:
-            colorWipe(calling_thread, leds, color)
+            colorWipe(calling_thread, leds, colors)
             if calling_thread.exit_request:
                 return
 
@@ -240,15 +242,18 @@ def flashing(calling_thread, leds, color, wait_ms=50, wait_off_ms=50):
 #           Beispiel Animationen
 
 # Define functions which animate LEDs in various ways.
-def colorWipe(calling_thread, leds, color, wait_ms=25):
+def colorWipe(calling_thread, leds, colors, wait_ms=25):
     """Wipe color across display a pixel at a time."""
     for led in leds:
-        led.color = color
-        # Exit animation
-        if calling_thread.exit_request:
-            return
-        else:
-            time.sleep(wait_ms/1000.0)
+        led.color = Color(0,0,0)
+    for color in colors:
+        for led in leds:
+            led.color = color
+            # Exit animation
+            if calling_thread.exit_request:
+                return
+            else:
+                time.sleep(wait_ms/1000.0)
 
 def theaterChase(calling_thread, leds, color, wait_ms=50, iterations=10):
     """Movie theater light style chaser animation."""
@@ -332,19 +337,22 @@ if __name__ == '__main__':
 
     # LED Array Wagen
     wagen_links=[]
-    for i in range(28,193):
+    for i in range(29,224):
         wagen_links.append(leds[i])
     wagen_rechts=[]
-    for i in range(413,192,-1):
+    for i in range(414,223,-1):
         wagen_rechts.append(leds[i])
 
     # LED Array Wagen
     tuer_links=[]
-    for i in range(414,len(leds)-1):
+    for i in range(415,len(leds)-1):
         tuer_links.append(leds[i])
     tuer_rechts=[]
-    for i in range(27,-1,-1):
-        tuer_rechts.append(leds[i]) 
+
+    for i in range(28,-1,-1):
+        tuer_rechts.append(leds[i])
+
+
 
     #MQTT-Client Thread starten
     client = mqtt.Client()
